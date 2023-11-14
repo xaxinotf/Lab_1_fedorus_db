@@ -1,5 +1,7 @@
 using Lab_1_fedorus_db.Contexts;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using MongoDB.Driver;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,7 +11,22 @@ builder.Services.AddDbContext<BookStoreDbContext>(options =>
 {
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
+var mongoDbSettings = builder.Configuration.GetSection("MongoDbSettings");
+builder.Services.AddSingleton<IMongoClient>(serviceProvider =>
+{
+    var connectionString = mongoDbSettings["ConnectionString"];
+    return new MongoClient(connectionString);
+});
+builder.Services.AddSingleton<BookStoreMongoDbContext>(serviceProvider =>
+{
+    var client = serviceProvider.GetRequiredService<IMongoClient>();
+    var databaseName = mongoDbSettings["DatabaseName"];
+    return new BookStoreMongoDbContext(client, databaseName);
+});
 var app = builder.Build();
+
+
+
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
